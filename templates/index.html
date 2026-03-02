@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>贝亲控制中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Arial", "Microsoft YaHei", sans-serif;
+        }
+
+        /* 贝亲主题配色定义 */
+        :root {
+            --pigeon-primary: #FF6B8B; /* 贝亲主色（粉） */
+            --pigeon-secondary: #FFC0CB; /* 贝亲辅助色（浅粉） */
+            --pigeon-dark: #E85C7D; /* 贝亲深色 */
+            --pigeon-light: #FFF5F7; /* 贝亲浅色背景 */
+            --pigeon-text: #5A3E48; /* 贝亲文字色 */
+            --danger-red: #e53e3e; /* 紧急按钮红色 */
+        }
+
+        body {
+            background-color: var(--pigeon-light);
+            padding: 10px; /* 缩小内边距 */
+            /* 4:3横板模式 - 整体尺寸缩小一倍 */
+            width: 100vw;
+            height: 75vw; /* 4:3比例 */
+            max-width: 600px; /* 原1200px → 缩小到600px */
+            max-height: 450px; /* 原900px → 缩小到450px */
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 10px; /* 缩小内边距 */
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 18px; /* 原36px → 缩小到18px */
+            color: var(--pigeon-text);
+            margin-bottom: 12.5px; /* 原25px → 缩小到12.5px */
+            font-weight: 700;
+            padding-bottom: 7.5px; /* 原15px → 缩小到7.5px */
+            border-bottom: 1px solid var(--pigeon-secondary); /* 原2px → 缩小到1px */
+        }
+
+        /* 状态显示区 */
+        .status-box {
+            background: linear-gradient(135deg, var(--pigeon-light) 0%, #fff 100%);
+            border-radius: 7.5px; /* 原15px → 缩小到7.5px */
+            padding: 12.5px; /* 原25px → 缩小到12.5px */
+            margin-bottom: 12.5px; /* 原25px → 缩小到12.5px */
+            text-align: center;
+            flex: 0 0 auto;
+            box-shadow: 0 2px 6px rgba(255, 107, 139, 0.1); /* 原4px 12px → 缩小到2px 6px */
+            border: 1px solid var(--pigeon-secondary);
+        }
+
+        .status-title {
+            font-size: 11px; /* 原22px → 缩小到11px */
+            color: var(--pigeon-text);
+            margin-bottom: 7.5px; /* 原15px → 缩小到7.5px */
+            font-weight: 500;
+        }
+
+        .position-display {
+            font-size: 28px; /* 原56px → 缩小到28px */
+            font-weight: bold;
+            color: var(--pigeon-primary);
+            margin: 5px 0; /* 原10px → 缩小到5px */
+            text-shadow: 0 1px 2px rgba(255, 107, 139, 0.1); /* 原2px 4px → 缩小到1px 2px */
+        }
+
+        .cycle-status {
+            font-size: 12px; /* 原24px → 缩小到12px */
+            color: var(--pigeon-dark);
+            margin-top: 7.5px; /* 原15px → 缩小到7.5px */
+            padding: 4px 0; /* 原8px → 缩小到4px */
+            border-radius: 4px; /* 原8px → 缩小到4px */
+            background-color: rgba(255, 107, 139, 0.1);
+        }
+
+        /* 按钮区域 - 紧急释放 + 上下箭头 */
+        .main-button-area {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* 紧急按钮靠左，上下键居中 */
+            margin: 10px 0; /* 原20px → 缩小到10px */
+            flex: 0 0 auto;
+            padding: 0 10px; /* 原20px → 缩小到10px */
+        }
+
+        /* 紧急释放按钮 - 红色圆形大按钮（放大且文字分行） */
+        .release-btn {
+            width: 150px; /* 原140px → 放大到200px */
+            height: 150px; /* 原140px → 放大到200px */
+            border-radius: 50%;
+            border: 9px solid #c53030; /* 原6px → 按比例放大到9px */
+            background: linear-gradient(135deg, var(--danger-red) 0%, #c53030 100%);
+            color: white;
+            font-size: 28px; /* 原24px → 调整到28px适配分行 */
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 12px 30px rgba(229, 62, 62, 0.4); /* 原8px 20px → 放大到12px 30px */
+            transition: all 0.2s ease;
+            flex-shrink: 0; /* 防止按钮被压缩 */
+            line-height: 1.2; /* 增加行高适配分行 */
+        }
+
+        .release-btn:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 15px 37.5px rgba(229, 62, 62, 0.5); /* 原10px 25px → 放大到15px 37.5px */
+            transform: scale(1.05);
+        }
+
+        .release-btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 6px 22.5px rgba(229, 62, 62, 0.4); /* 原4px 15px → 放大到6px 22.5px */
+        }
+
+        /* 上下箭头居中容器 */
+        .direction-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 按钮样式 - 三角形上下移（贝亲配色） */
+        .direction-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12.5px; /* 原25px → 缩小到12.5px */
+            flex: 0 0 auto;
+        }
+
+        .dir-btn {
+            width: 50px; /* 原100px → 缩小到50px */
+            height: 50px; /* 原100px → 缩小到50px */
+            border: none;
+            cursor: pointer;
+            background: var(--pigeon-primary);
+            border-radius: 6px; /* 原12px → 缩小到6px */
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 2px 6px rgba(255, 107, 139, 0.3); /* 原4px 12px → 缩小到2px 6px */
+            transition: all 0.2s ease;
+        }
+
+        .dir-btn:hover {
+            background: var(--pigeon-dark);
+            box-shadow: 0 3px 8px rgba(255, 107, 139, 0.4); /* 原6px 16px → 缩小到3px 8px */
+        }
+
+        /* 上三角 */
+        .up-btn::after {
+            content: '';
+            border-left: 15px solid transparent; /* 原30px → 缩小到15px */
+            border-right: 15px solid transparent; /* 原30px → 缩小到15px */
+            border-bottom: 22.5px solid white; /* 原45px → 缩小到22.5px */
+            transition: transform 0.2s ease;
+        }
+
+        /* 下三角 */
+        .down-btn::after {
+            content: '';
+            border-left: 15px solid transparent; /* 原30px → 缩小到15px */
+            border-right: 15px solid transparent; /* 原30px → 缩小到15px */
+            border-top: 22.5px solid white; /* 原45px → 缩小到22.5px */
+            transition: transform 0.2s ease;
+        }
+
+        .dir-btn:active {
+            background: var(--pigeon-dark);
+            transform: scale(0.95);
+            box-shadow: 0 1px 4px rgba(255, 107, 139, 0.3); /* 原2px 8px → 缩小到1px 4px */
+        }
+
+        .dir-btn:active::after {
+            transform: scale(0.9);
+        }
+
+        /* 输入表单区 */
+        .input-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px; /* 原30px → 缩小到15px */
+            flex: 1 1 auto;
+            align-items: center;
+            padding: 0 10px; /* 原20px → 缩小到10px */
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7.5px; /* 原15px → 缩小到7.5px */
+            align-items: center;
+            text-align: center;
+        }
+
+        .form-label {
+            font-size: 14px; /* 原28px → 缩小到14px */
+            color: var(--pigeon-text);
+            font-weight: 600;
+            text-shadow: 0 0.5px 1px rgba(0,0,0,0.05); /* 原1px 2px → 缩小到0.5px 1px */
+        }
+
+        /* 输入框样式优化 - 贝亲配色 */
+        .form-input {
+            width: 90px; /* 原180px → 缩小到90px */
+            padding: 11px 7.5px; /* 原22px 15px → 缩小到11px 7.5px */
+            font-size: 15px; /* 原30px → 缩小到15px */
+            font-weight: bold;
+            border: 2px solid var(--pigeon-primary); /* 原4px → 缩小到2px */
+            border-radius: 6px; /* 原12px → 缩小到6px */
+            text-align: center;
+            outline: none;
+            background-color: #fff;
+            color: var(--pigeon-text);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(255, 107, 139, 0.1); /* 原4px 8px → 缩小到2px 4px */
+        }
+
+        .form-input:focus {
+            border-color: var(--pigeon-dark); /* 聚焦时深色边框 */
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(255, 107, 139, 0.2); /* 原6px → 缩小到3px */
+            transform: scale(1.05);
+        }
+
+        /* 启动循环按钮 - 启动键形状（非宽按钮） */
+        .cycle-btn {
+            grid-column: 1 / -1;
+            width: 140px; /* 原280px → 缩小到140px */
+            height: 40px; /* 原80px → 缩小到40px */
+            margin: 10px auto 0; /* 原20px → 缩小到10px */
+            font-size: 15px; /* 原30px → 缩小到15px */
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--pigeon-primary) 0%, var(--pigeon-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 20px; /* 原40px → 缩小到20px */
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 3px 9px rgba(255, 107, 139, 0.4); /* 原6px 18px → 缩小到3px 9px */
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cycle-btn:hover {
+            background: linear-gradient(135deg, var(--pigeon-dark) 0%, #D84A69 100%);
+            box-shadow: 0 4px 11px rgba(255, 107, 139, 0.5); /* 原8px 22px → 缩小到4px 11px */
+            transform: translateY(-1px); /* 原2px → 缩小到1px */
+        }
+
+        .cycle-btn:active {
+            transform: translateY(0) scale(0.98);
+            box-shadow: 0 2px 6px rgba(255, 107, 139, 0.4); /* 原4px 12px → 缩小到2px 6px */
+        }
+
+        /* 响应式调整（适配720p） */
+        @media (max-width: 900px) {
+            .container {
+                padding: 7.5px; /* 原15px → 缩小到7.5px */
+            }
+
+            h1 {
+                font-size: 15px; /* 原30px → 缩小到15px */
+            }
+
+            .position-display {
+                font-size: 24px; /* 原48px → 缩小到24px */
+            }
+
+            .release-btn {
+                width: 180px; /* 原120px → 调整为180px（保持放大） */
+                height: 180px; /* 原120px → 调整为180px（保持放大） */
+                font-size: 24px; /* 原20px → 调整为24px */
+            }
+
+            .dir-btn {
+                width: 40px; /* 原80px → 缩小到40px */
+                height: 40px; /* 原80px → 缩小到40px */
+            }
+
+            .up-btn::after, .down-btn::after {
+                border-left-width: 12.5px; /* 原25px → 缩小到12.5px */
+                border-right-width: 12.5px; /* 原25px → 缩小到12.5px */
+                border-bottom-width: 20px; /* 原40px → 缩小到20px */
+                border-top-width: 20px; /* 原40px → 缩小到20px */
+            }
+
+            .form-label {
+                font-size: 12px; /* 原24px → 缩小到12px */
+            }
+
+            .form-input {
+                width: 75px; /* 原150px → 缩小到75px */
+                font-size: 13px; /* 原26px → 缩小到13px */
+                padding: 9px 6px; /* 原18px 12px → 缩小到9px 6px */
+                border-width: 1.5px; /* 原3px → 缩小到1.5px */
+            }
+
+            .cycle-btn {
+                width: 110px; /* 原220px → 缩小到110px */
+                height: 35px; /* 原70px → 缩小到35px */
+                font-size: 13px; /* 原26px → 缩小到13px */
+            }
+
+            .main-button-area {
+                padding: 0 5px; /* 原10px → 缩小到5px */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>贝亲控制中心</h1>
+
+        <!-- 状态显示 - 改为实际间隙 -->
+        <div class="status-box">
+            <div class="status-title">实际间隙</div>
+            <div class="position-display" id="position">0.00 mm</div>
+            <div class="cycle-status" id="cycleStatus">就绪</div>
+        </div>
+
+        <!-- 主要按钮区域：紧急释放（靠左） + 上下箭头（居中） -->
+        <div class="main-button-area">
+            <!-- 紧急释放按钮文字分行 -->
+            <button class="release-btn" id="homeBtn">紧急<br>释放</button>
+            <div class="direction-center">
+                <div class="direction-buttons">
+                    <button class="dir-btn up-btn" id="upBtn" title="上移"></button>
+                    <button class="dir-btn down-btn" id="downBtn" title="下移"></button>
+                </div>
+            </div>
+            <div style="width: 200px;"></div> <!-- 占位宽度调整为按钮宽度 -->
+        </div>
+
+        <!-- 循环参数输入 -->
+        <div class="input-form">
+            <div class="form-group">
+                <label class="form-label" for="gap">间隙 (mm)</label>
+                <input type="number" class="form-input" id="gap" value="6.0" step="0.1" min="5" max="20.0">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="speed">速度 (mm/s)</label>
+                <input type="number" class="form-input" id="speed" value="1.0" step="0.1" min="0.1" max="10.0">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="hold">保持 (s)</label>
+                <input type="number" class="form-input" id="hold" value="0.1" step="0.1" min="0.1" max="60.0">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="cycles">循环次数</label>
+                <input type="number" class="form-input" id="cycles" value="1" step="1" min="1" max="999">
+            </div>
+            <button class="cycle-btn" id="cycleBtn">启动循环</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM元素获取
+        const upBtn = document.getElementById('upBtn');
+        const downBtn = document.getElementById('downBtn');
+        const homeBtn = document.getElementById('homeBtn');
+        const cycleBtn = document.getElementById('cycleBtn');
+        const positionDisplay = document.getElementById('position');
+        const cycleStatus = document.getElementById('cycleStatus');
+        const gapInput = document.getElementById('gap');
+        const speedInput = document.getElementById('speed');
+        const holdInput = document.getElementById('hold');
+        const cyclesInput = document.getElementById('cycles');
+
+        // 全局状态
+        let isMoving = false;
+        let moveTimer = null; // 长按定时器
+        const MOVE_INTERVAL = 100; // 长按移动间隔（毫秒）
+        let isHoming = false; // 回零状态标记
+
+        // 接口请求函数
+        async function requestAPI(url, method = 'GET', data = {}) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                if (method !== 'GET') options.body = JSON.stringify(data);
+                const response = await fetch(url, options);
+                return await response.json();
+            } catch (error) {
+                console.error('API请求失败:', error);
+                cycleStatus.textContent = '连接异常';
+                return null;
+            }
+        }
+
+        // 位置更新（带防负数，实际间隙 = 20 - 原位置数值）
+        async function updatePosition() {
+            const data = await requestAPI('/position');
+            if (data) {
+                // 核心计算：实际间隙 = 20 - 原位置数值，确保数值≥0
+                const actualGap = Math.max(0, 20 - data.position);
+                // 保留两位小数显示
+                positionDisplay.textContent = `${actualGap.toFixed(2)} mm`;
+                
+                if (data.cycle_current > 0) {
+                    cycleStatus.textContent = `循环中: ${data.cycle_current + 1}/${data.cycle_total}`;
+                } else {
+                    // 检查是否在回零（启动中）状态
+                    if (isHoming) {
+                        cycleStatus.textContent = 'READY';
+                    } else {
+                        cycleStatus.textContent = isMoving ? '移动中' : '就绪';
+                    }
+                }
+            }
+        }
+
+        // 定期更新位置
+        setInterval(updatePosition, 200);
+
+        // 移动控制（支持长按）
+        function startMove(direction) {
+            if (isMoving) return;
+            isMoving = true;
+            // 立即执行一次移动
+            moveMotor(direction);
+            // 长按持续移动
+            moveTimer = setInterval(() => moveMotor(direction), MOVE_INTERVAL);
+        }
+
+        function stopMove() {
+            isMoving = false;
+            if (moveTimer) {
+                clearInterval(moveTimer);
+                moveTimer = null;
+            }
+        }
+
+        async function moveMotor(direction) {
+            const speed = parseFloat(speedInput.value) || 2.0;
+            await requestAPI('/move', 'POST', { direction, speed });
+        }
+
+        // 上下移按钮事件（支持触摸屏长按）
+        upBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 阻止默认行为（避免滚动）
+            startMove('up');
+        });
+        upBtn.addEventListener('mousedown', () => startMove('up'));
+
+        downBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startMove('down');
+        });
+        downBtn.addEventListener('mousedown', () => startMove('down'));
+
+        // 停止移动（触摸结束、鼠标松开、离开按钮）
+        ['touchend', 'mouseup', 'mouseleave'].forEach(event => {
+            upBtn.addEventListener(event, stopMove);
+            downBtn.addEventListener(event, stopMove);
+        });
+
+        // 紧急释放（原回零）
+        homeBtn.addEventListener('click', async () => {
+            stopMove();
+            isHoming = true;
+            cycleStatus.textContent = 'READY';
+            await requestAPI('/home', 'POST');
+            isHoming = false;
+            cycleStatus.textContent = '释放完成';
+        });
+        homeBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            homeBtn.click();
+        });
+
+        // 启动循环
+        cycleBtn.addEventListener('click', async () => {
+            stopMove();
+            const gap = parseFloat(gapInput.value) || 2.0;
+            const speed = parseFloat(speedInput.value) || 2.0;
+            const hold = parseFloat(holdInput.value) || 1.0;
+            const cycles = parseInt(cyclesInput.value) || 1;
+
+            // 参数验证
+            if (gap < 5.0 || gap > 10.0) {
+                alert('间隙范围：5.0-10.0 mm');
+                return;
+            }
+            if (speed < 0.1 || speed > 10.0) {
+                alert('速度范围：0.1-10.0 mm/s');
+                return;
+            }
+            if (hold < 0.1 || hold > 10.0) {
+                alert('保持时间范围：0.1-10.0 s');
+                return;
+            }
+            if (cycles < 1 || cycles > 999) {
+                alert('循环次数范围：1-999');
+                return;
+            }
+
+            await requestAPI('/cycle', 'POST', { gap, speed, hold, cycles });
+            cycleStatus.textContent = `循环中: 0/${cycles}`;
+        });
+        cycleBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            cycleBtn.click();
+        });
+
+        // 输入框触摸优化
+        const inputs = [gapInput, speedInput, holdInput, cyclesInput];
+        inputs.forEach(input => {
+            input.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            });
+        });
+
+        // 初始更新位置
+        isHoming = true;
+        updatePosition();
+    </script>
+</body>
+</html>
