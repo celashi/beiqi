@@ -508,16 +508,16 @@
             const cycles = parseInt(cyclesInput.value) || 1;
 
             // 参数验证
-            if (gap < 5.0 || gap > 10.0) {
-                alert('间隙范围：5.0-10.0 mm');
+            if (gap < 5.0 || gap > 20.0) {
+                alert('间隙范围：5.0-20.0 mm');
                 return;
             }
             if (speed < 0.1 || speed > 10.0) {
                 alert('速度范围：0.1-10.0 mm/s');
                 return;
             }
-            if (hold < 0.1 || hold > 10.0) {
-                alert('保持时间范围：0.1-10.0 s');
+            if (hold < 0.1 || hold > 60.0) {
+                alert('保持时间范围：0.1-60.0 s');
                 return;
             }
             if (cycles < 1 || cycles > 999) {
