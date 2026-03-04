@@ -102,6 +102,7 @@ class MotionController:
 
         self.state_lock = threading.Lock()
         self.button_lock = threading.Lock()
+        self.homing_lock = threading.Lock()
 
         self.current_position_mm = 0.0
         self.zero_position_established = False
@@ -198,47 +199,53 @@ class MotionController:
         if speed is None:
             speed = self.cfg.homing_speed
 
-        self.debug_log("开始找零")
-        self.abort_event.clear()
+        if not self.homing_lock.acquire(blocking=False):
+            self.debug_log("找零已在进行中，忽略重复找零请求")
+            return
 
-        if self.simulate:
+        try:
+            self.debug_log("开始找零")
+            self.abort_event.clear()
+
+            if self.simulate:
+                with self.state_lock:
+                    self.current_position_mm = 0.0
+                    self.zero_position_established = True
+                self.debug_log("模拟找零完成")
+                return
+
+            while True:
+                if self._should_abort():
+                    self.motor.stop()
+                    self.debug_log("找零过程被急停中断")
+                    return
+
+                if self.pi.read(self.cfg.limit_switch_pin) == 0:
+                    self.motor.stop()
+                    break
+
+                self.motor.move('down', 0.1, speed)
+                with self.state_lock:
+                    self.current_position_mm -= 0.1
+
+                if self.current_position_mm < -100:
+                    self.motor.stop()
+                    self.debug_log("找零超限停止")
+                    return
+
+            self.move_mm_worker(self.cfg.home_offset_mm, speed, check_auto_release=False)
+
             with self.state_lock:
                 self.current_position_mm = 0.0
                 self.zero_position_established = True
-            self.debug_log("模拟找零完成")
-            return
-
-        while True:
-            if self._should_abort():
-                self.motor.stop()
-                self.debug_log("找零过程被急停中断")
-                return
-
-            if self.pi.read(self.cfg.limit_switch_pin) == 0:
-                self.motor.stop()
-                break
-
-            self.motor.move('down', 0.1, speed)
-            with self.state_lock:
-                self.current_position_mm -= 0.1
-
-            if self.current_position_mm < -100:
-                self.motor.stop()
-                self.debug_log("找零超限停止")
-                return
-
-        self.move_mm_worker(self.cfg.home_offset_mm, speed, check_auto_release=False)
-
-        with self.state_lock:
-            self.current_position_mm = 0.0
-            self.zero_position_established = True
-        self.debug_log("找零完成")
+            self.debug_log("找零完成")
+        finally:
+            self.homing_lock.release()
 
     def move_to_zero_worker(self):
         with self.state_lock:
             if not self.zero_position_established:
-                self.debug_log("零点未建立，先执行找零再回零")
-                self.homing_worker(self.cfg.homing_speed)
+                self.debug_log("零点未建立，忽略回零请求")
                 return
             dist = -self.current_position_mm
 
@@ -327,7 +334,12 @@ class MotionController:
             self.motor.stop()
             with self.cmd_queue.mutex:
                 self.cmd_queue.queue.clear()
-            self.cmd_queue.put(self.move_to_zero_worker)
+            with self.state_lock:
+                zero_ready = self.zero_position_established
+            if zero_ready:
+                self.cmd_queue.put(self.move_to_zero_worker)
+            else:
+                self.debug_log("零点未建立，跳过急停后的回零入队")
             time.sleep(0.5)
 
     # API-facing methods
@@ -390,12 +402,12 @@ class MotionController:
 
     def startup(self):
         self.init_gpio()
-        self.start_background_threads()
         self.debug_log("启动找零")
         self.homing_worker()
         with self.state_lock:
             if not self.zero_position_established:
                 raise Exception("初始找零失败，无法启动服务")
+        self.start_background_threads()
 
     def shutdown(self):
         self.motor.stop()
