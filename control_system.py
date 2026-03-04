@@ -342,6 +342,7 @@ class MotionController:
             self.cmd_queue.put(self.move_to_zero_worker)
             return {"status": "emergency_release", "message": "间隙过小，已触发紧急释放"}
 
+        self.abort_event.clear()
         step = self.get_dynamic_move_step(speed)
         dist = step if direction == "up" else -step
         self.cmd_queue.put(lambda: self.move_mm_worker(dist, speed))
@@ -352,6 +353,10 @@ class MotionController:
         self.motor.stop()
         with self.cmd_queue.mutex:
             self.cmd_queue.queue.clear()
+        with self.state_lock:
+            self.cycle_running = False
+            self.cycle_progress["current"] = 0
+            self.cycle_progress["total"] = 0
         return {"status": "stopped"}
 
     def enqueue_home(self):
@@ -359,10 +364,15 @@ class MotionController:
         self.motor.stop()
         with self.cmd_queue.mutex:
             self.cmd_queue.queue.clear()
+        with self.state_lock:
+            self.cycle_running = False
+            self.cycle_progress["current"] = 0
+            self.cycle_progress["total"] = 0
         self.cmd_queue.put(self.move_to_zero_worker)
         return {"status": "releasing"}
 
     def enqueue_cycle(self, gap, speed, hold, cycles):
+        self.abort_event.clear()
         with self.cmd_queue.mutex:
             self.cmd_queue.queue.clear()
         self.cmd_queue.put(lambda: self.run_cycle_worker(gap, speed, hold, cycles))
