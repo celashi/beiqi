@@ -398,6 +398,7 @@
         let moveTimer = null; // 长按定时器
         const MOVE_INTERVAL = 100; // 长按移动间隔（毫秒）
         let isHoming = false; // 回零状态标记
+        let isCycleRunning = false; // 循环运行状态
 
         // 接口请求函数
         async function requestAPI(url, method = 'GET', data = {}) {
@@ -427,15 +428,19 @@
                 // 保留两位小数显示
                 positionDisplay.textContent = `${actualGap.toFixed(2)} mm`;
                 
-                if (data.cycle_current > 0) {
-                    cycleStatus.textContent = `循环中: ${data.cycle_current + 1}/${data.cycle_total}`;
-                } else {
-                    // 检查是否在回零（启动中）状态
-                    if (isHoming) {
-                        cycleStatus.textContent = 'READY';
+                isCycleRunning = !!data.cycle_running;
+
+                if (isCycleRunning) {
+                    cycleStatus.textContent = `循环中: ${data.cycle_current}/${data.cycle_total}`;
+                } else if (isHoming) {
+                    if (actualGap >= 19.95) {
+                        isHoming = false;
+                        cycleStatus.textContent = '释放完成';
                     } else {
-                        cycleStatus.textContent = isMoving ? '移动中' : '就绪';
+                        cycleStatus.textContent = '释放中';
                     }
+                } else {
+                    cycleStatus.textContent = isMoving ? '移动中' : '就绪';
                 }
             }
         }
@@ -489,10 +494,8 @@
         homeBtn.addEventListener('click', async () => {
             stopMove();
             isHoming = true;
-            cycleStatus.textContent = 'READY';
+            cycleStatus.textContent = '释放中';
             await requestAPI('/home', 'POST');
-            isHoming = false;
-            cycleStatus.textContent = '释放完成';
         });
         homeBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();

@@ -81,6 +81,8 @@ class IndustrialStepper:
 
         # 3. 构建脉冲
         wave_id = self._build_pulse_wave(freq, steps)
+        if wave_id < 0:
+            raise RuntimeError(f"wave_create 失败, code={wave_id}")
 
         # 4. 播放脉冲
         self.pi.wave_send_once(wave_id)
@@ -89,7 +91,10 @@ class IndustrialStepper:
         while self.pi.wave_tx_busy():
             time.sleep(0.0001)
 
-        self.pi.wave_delete(wave_id)
+        try:
+            self.pi.wave_delete(wave_id)
+        except pigpio.error:
+            pass
 
     def stop(self):
         self.pi.wave_tx_stop()
